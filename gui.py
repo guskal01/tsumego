@@ -79,5 +79,5 @@ class TsumegoApp(App):
 		assert board.height == self.height and board.width == self.width
 		for r in range(self.height):
 			for c in range(self.width):
-				self.gui_board.set_stone(r, c, board.a[r][c])
+				self.gui_board.set_stone(r, c, board.get_stone(r, c))
 		self.gui_board.draw()

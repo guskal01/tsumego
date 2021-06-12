@@ -1,5 +1,5 @@
 import random
-from board import Board
+from tsumegoboard import Board
 import threading
 import time
 import dqn
@@ -16,20 +16,26 @@ def main():
 	exit()
 
 	# Testing:
-	b = Board(height, width)
-	while 1:
-		#time.sleep(0.5)
-		m = b.get_legal_moves()[1:]
-		if(len(m) == 0):
-			print("Restarting")
-			b = Board(height, width)
-			m = b.get_legal_moves()[1:]
-		#print("Legal moves:", m)
-		r,c = random.sample(m, 1)[0]
-		#print("Move:", r, c)
-		b.play(r, c)
-		if(use_gui): gui.update(b)
-		#print(b)
+	start = time.time()
+	s = 0
+	for i in range(20000):
+		b = Board(height, width)
+		b.set_stone(1, 1, 2)
+		b.set_stone(2, 2, 2)
+		b.set_stone(1, 3, 2)
+		b.reset_superko()
+		random.seed(i)
+		while(1):
+			if(b.black_won()):
+				break
+			if(b.game_over()):
+				break
+			m = b.get_legal_moves()
+			s += len(m)
+			r,c = random.sample(m, 1)[0]
+			b.play(r, c)
+	print(s) # 13495803
+	print(time.time()-start)
 
 if(use_gui):
 	from gui import TsumegoApp

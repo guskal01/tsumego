@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import numpy as np
 import random
 import time
-from board import Board
+from tsumegoboard import Board
 from collections import deque
 
 IN_CHANNELS = 5
@@ -38,11 +38,11 @@ def features_from_board(board):
 	ret = np.zeros((IN_CHANNELS, board.height, board.width), dtype=np.float32)
 	for r in range(board.height):
 		for c in range(board.width):
-			if(board.a[r][c] == 0):
+			if(board.get_stone(r, c) == 0):
 				ret[0][r][c] = 1
-			elif(board.a[r][c] == 1):
+			elif(board.get_stone(r, c) == 1):
 				ret[1][r][c] = 1
-			elif(board.a[r][c] == 2):
+			elif(board.get_stone(r, c) == 2):
 				ret[2][r][c] = 1
 			else: assert False
 			if(board.turn == 1):
