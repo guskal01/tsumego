@@ -62,9 +62,9 @@ class TsumegoApp(App):
 		self.height = height
 		self.width = width
 		self.ready = False
-		Clock.schedule_once(self.is_ready, 0)
 
 	def is_ready(self, c):
+		self.gui_board.draw()
 		self.ready = True
 
 	def build(self):
@@ -73,6 +73,7 @@ class TsumegoApp(App):
 			self.gui_board.set_stone(i, self.width, 1)
 		for i in range(self.width+1):
 			self.gui_board.set_stone(self.height, i, 1)
+		Clock.schedule_once(self.is_ready, 0)
 		return self.gui_board
 
 	def update(self, board):
