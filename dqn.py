@@ -8,8 +8,10 @@ from tsumegoboard import Board
 from collections import deque
 
 IN_CHANNELS = 5
+SIMULS = 20 # number of games played at the same time, in one round
+BATCH_SIZE = 32
 assert torch.cuda.is_available()
-device = torch.device('cpu') # 'cuda'
+device = torch.device('cuda')
 #torch.backends.cudnn.benchmark = True
 #torch.backends.cudnn.fastest = True
 
@@ -81,53 +83,61 @@ def train(height, width, gui=None):
 	net = Network(height, width, 6).to(device)
 	optimizer = torch.optim.Adam(net.parameters(), lr=1e-5)
 
-	replay_buffer = deque(maxlen=10000)
+	experience = deque(maxlen=10000)
 	gamma = 1
 	rounds = 0
 	while(1):
-		buffer = []
-		for i in range(20):
-			game_buffer = []
-			b = build_board(height, width)
-			while(1):
-				x = features_from_board(b)
-				y = net(torch.from_numpy(x).to(device).unsqueeze(0)).detach().cpu().numpy()
-				noise = np.random.normal(0, .1, y.shape)
-				y += noise
-				if(random.random() < gamma): y = noise
-				movenum, move = best_legal_move(y[0], b)
+		boards = []
+		for i in range(SIMULS):
+			boards.append(build_board(height, width))
+		games = [[] for _ in range(SIMULS)]
+		ended = 0
+		while(ended < SIMULS):
+			x = []
+			for i in range(SIMULS):
+				x.append(features_from_board(boards[i]))
+			x = np.stack(x)
+			y = net(torch.from_numpy(x).to(device)).detach().cpu().numpy()
+			for i in range(SIMULS):
+				if(boards[i].black_won() or boards[i].game_over()):
+					continue
+				noise = np.random.normal(0, .1, y[i].shape)
+				y[i] += noise
+				if(random.random() < gamma): y[i] = noise
+				movenum, move = best_legal_move(y[i], boards[i])
+				games[i].append([x[i], movenum])
+				boards[i].play(*move)
 
-				game_buffer.append([x, movenum])
-				b.play(*move)
-				if(b.black_won()):
-					for i in range(len(game_buffer)):
-						game_buffer[i].append(0)
-					print("B", end="", flush=True)
-					break
-				if(b.game_over()):
-					for i in range(len(game_buffer)):
-						game_buffer[i].append(1)
-					print("W", end="", flush=True)
-					break
-			buffer += game_buffer
+				winner = None
+				if(boards[i].black_won()): winner = 0
+				elif(boards[i].game_over()): winner = 1
+				if(winner != None):
+					for j in range(len(games[i])):
+						games[i][j].append(winner)
+					print("BW"[winner], end="", flush=True)
+					ended += 1
 		print()
-		replay_buffer.extend(buffer)
-		buffer += random.sample(replay_buffer, min(len(replay_buffer), len(buffer)))
-		random.shuffle(buffer)
-		buffer_x = []
-		buffer_move = []
-		buffer_result = []
-		for i in range(len(buffer)):
-			buffer_x.append(buffer[i][0])
-			buffer_move.append(buffer[i][1])
-			buffer_result.append(buffer[i][2])
-		buffer_x = torch.tensor(np.stack(buffer_x, axis=0)).to(device)
-		buffer_move = torch.tensor(np.stack(buffer_move, axis=0)).to(device)
-		buffer_result = torch.tensor(np.stack(buffer_result, axis=0), dtype=torch.float32).to(device)
-		for i in range(0, len(buffer), 32):
-			x = buffer_x[i:i+32]
-			move = buffer_move[i:i+32]
-			result = buffer_result[i:i+32]
+		train_data = []
+		for i in range(SIMULS):
+			train_data += games[i]
+
+		experience.extend(train_data)
+		train_data += random.sample(experience, min(len(experience), len(train_data)))
+		random.shuffle(train_data)
+		train_x = []
+		train_move = []
+		train_result = []
+		for i in range(len(train_data)):
+			train_x.append(train_data[i][0])
+			train_move.append(train_data[i][1])
+			train_result.append(train_data[i][2])
+		train_x = torch.tensor(np.stack(train_x, axis=0)).to(device)
+		train_move = torch.tensor(np.stack(train_move, axis=0)).to(device)
+		train_result = torch.tensor(np.stack(train_result, axis=0), dtype=torch.float32).to(device)
+		for i in range(0, len(train_data), BATCH_SIZE):
+			x = train_x[i:i+BATCH_SIZE]
+			move = train_move[i:i+BATCH_SIZE]
+			result = train_result[i:i+BATCH_SIZE]
 			y = net(x)
 			y = y.gather(dim=1, index=move.unsqueeze(1)).flatten()
 			loss = F.mse_loss(y, result)
@@ -176,17 +186,18 @@ def playgame(height, width, net, gui=None):
 		movenum, move = best_legal_move(y[0], b)
 		
 		b.play(*move)
+		if(gui): gui.update(b)
+
+		print("WR:", y[0][movenum])
+		print(*move)
+		print(b)
+		print()
+
 		if(b.black_won()):
 			print("BLACK WON")
 			break
 		if(b.game_over()):
 			print("WHITE WON")
 			break
-
-		print("WR:", y[0][movenum])
-		print(*move)
-		print(b)
-		print()
-		if(gui): gui.update(b)
 
 		time.sleep(0.7)
