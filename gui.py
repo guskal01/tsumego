@@ -6,8 +6,6 @@ from kivy.uix.textinput import TextInput
 from kivy.graphics import *
 from kivy.clock import Clock
 
-from board import Board
-
 class GoPos(Widget):
 	def __init__(self, r, c, **kwargs):
 		super(GoPos, self).__init__(**kwargs)
