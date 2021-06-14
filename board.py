@@ -40,6 +40,9 @@ class Board:
 		self.a[r][c] = color
 		if(self.a[r][c] != 0): self.zobrist_hash ^= self.zobrist_table[r][c][self.a[r][c]-1]
 
+	def get_stone(self, r, c):
+		return self.a[r][c]
+
 	def switch_turn(self):
 		self.turn ^= 3
 		self.zobrist_hash ^= self.zobrist_turn
