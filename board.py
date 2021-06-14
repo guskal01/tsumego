@@ -132,6 +132,24 @@ class Board:
 	def game_over(self):
 		return self.passes >= 3 or self.moves >= self.height*self.width*5
 
+	def features(self):
+		ret = np.zeros((5, self.height, self.width), dtype=np.float32)
+		for r in range(self.height):
+			for c in range(self.width):
+				if(self.get_stone(r, c) == 0):
+					ret[0][r][c] = 1
+				elif(self.get_stone(r, c) == 1):
+					ret[1][r][c] = 1
+				elif(self.get_stone(r, c) == 2):
+					ret[2][r][c] = 1
+				else: assert False
+				if(self.turn == 1):
+					ret[3][r][c] = 1
+				elif(self.turn == 2):
+					ret[4][r][c] = 1
+				else: assert False
+		return ret
+
 	def __str__(self):
 		L = []
 		for r in range(self.height):

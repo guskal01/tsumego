@@ -1,6 +1,7 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include "structmember.h"
+#include <numpy/arrayobject.h>
 #include <random>
 #include <tuple>
 
@@ -264,6 +265,25 @@ static PyObject* Board_game_over(BoardObject* self, PyObject* Py_UNUSED(ignored)
     Py_RETURN_FALSE;
 }
 
+static PyObject* Board_features(BoardObject* self, PyObject* Py_UNUSED(ignored)){
+    if(PyArray_API == NULL) import_array();
+
+    npy_intp dims[] = {5, self->height, self->width};
+    
+    float ret[5][self->height][self->width];
+    memset(ret, 0, sizeof(ret));
+    for(int r = 0; r < self->height; r++){
+        for(int c = 0; c < self->width; c++){
+            ret[self->a[r][c]][r][c] = 1;
+            ret[self->turn+2][r][c] = 1;
+        }
+    }
+
+    PyObject* x = PyArray_SimpleNew(3, dims, NPY_FLOAT32);
+    memcpy(PyArray_DATA(x), ret, sizeof(ret));
+    return x;
+}
+
 static PyObject* Board_str(BoardObject* self){
     std::string s = "";
     for(int r = 0; r < self->height; r++){
@@ -302,6 +322,7 @@ static PyMethodDef Board_methods[] = {
     {"play", (PyCFunction)Board_play, METH_VARARGS, "Play move"},
     {"black_won", (PyCFunction)Board_black_won, METH_NOARGS, "Check if black won"},
     {"game_over", (PyCFunction)Board_game_over, METH_NOARGS, "Check if game is over (white won)"},
+    {"features", (PyCFunction)Board_features, METH_NOARGS, "Features for neural net"},
     {NULL}
 };
 

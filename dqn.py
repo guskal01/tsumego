@@ -7,7 +7,6 @@ import time
 from tsumegoboard import Board
 from collections import deque
 
-IN_CHANNELS = 5
 SIMULS = 20 # number of games played at the same time, in one round
 BATCH_SIZE = 32
 assert torch.cuda.is_available()
@@ -22,7 +21,7 @@ class Network(nn.Module):
 		self.channels = 32
 
 		self.conv = []
-		self.conv.append(nn.Conv2d(IN_CHANNELS, self.channels, 3, padding=1))
+		self.conv.append(nn.Conv2d(5, self.channels, 3, padding=1))
 		for i in range(layers-2):
 			self.conv.append(nn.Conv2d(self.channels, self.channels, 3, padding=1))
 		self.conv.append(nn.Conv2d(self.channels, 3, 3, padding=1))
@@ -35,24 +34,6 @@ class Network(nn.Module):
 		x = torch.flatten(x, 1)
 		x = self.fc(x)
 		return x
-
-def features_from_board(board):
-	ret = np.zeros((IN_CHANNELS, board.height, board.width), dtype=np.float32)
-	for r in range(board.height):
-		for c in range(board.width):
-			if(board.get_stone(r, c) == 0):
-				ret[0][r][c] = 1
-			elif(board.get_stone(r, c) == 1):
-				ret[1][r][c] = 1
-			elif(board.get_stone(r, c) == 2):
-				ret[2][r][c] = 1
-			else: assert False
-			if(board.turn == 1):
-				ret[3][r][c] = 1
-			elif(board.turn == 2):
-				ret[4][r][c] = 1
-			else: assert False
-	return ret
 
 def best_legal_move(y, board):
 	sign = -1
@@ -95,7 +76,7 @@ def train(height, width, gui=None):
 		while(ended < SIMULS):
 			x = []
 			for i in range(SIMULS):
-				x.append(features_from_board(boards[i]))
+				x.append(boards[i].features())
 			x = np.stack(x)
 			y = net(torch.from_numpy(x).to(device)).detach().cpu().numpy()
 			for i in range(SIMULS):
