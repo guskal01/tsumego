@@ -129,9 +129,9 @@ def test(height, width, net):
 				if(len(move) == 1): move = move[0]
 				else: move = random.sample(move[1:], 1)[0]
 			else:
-				x = torch.from_numpy(features_from_board(b)).unsqueeze(0)
+				x = torch.from_numpy(b.features()).unsqueeze(0)
 				y = net(x.to(device)).detach().cpu().numpy()
-				movenum, move = best_legal_move(y[0], b)
+				movenum, move = b.best_move(y[0])
 			b.play(*move)
 			moves += 1
 			if(b.black_won()):
@@ -145,9 +145,9 @@ def test(height, width, net):
 def playgame(height, width, net, gui=None):
 	b = build_board(height, width)
 	while(1):
-		x = torch.from_numpy(features_from_board(b)).unsqueeze(0)
+		x = torch.from_numpy(b.features()).unsqueeze(0)
 		y = net(x.to(device)).detach().cpu().numpy()
-		movenum, move = best_legal_move(y[0], b)
+		movenum, move = b.best_move(y[0])
 		
 		b.play(*move)
 		if(gui): gui.update(b)
