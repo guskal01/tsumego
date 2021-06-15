@@ -35,23 +35,6 @@ class Network(nn.Module):
 		x = self.fc(x)
 		return x
 
-def best_legal_move(y, board):
-	sign = -1
-	if(board.turn == 2): sign = 1
-
-	t = (board.turn-1)*(board.height*board.width+1)
-
-	movenum = board.height*board.width + t
-	move = (-1, -1) #pass
-	best = sign*y[board.height*board.width + t] #pass
-	for r in range(board.height):
-		for c in range(board.width):
-			if(sign*y[r*board.width+c + t] > best and board.is_legal(r, c)):
-				best = sign*y[r*board.width+c + t]
-				move = (r, c)
-				movenum = r*board.width+c + t
-	return movenum, move
-
 def build_board(height, width):
 	b = Board(height, width)
 	b.set_stone(1, 1, 2)
@@ -85,7 +68,7 @@ def train(height, width, gui=None):
 				noise = np.random.normal(0, .1, y[i].shape)
 				y[i] += noise
 				if(random.random() < gamma): y[i] = noise
-				movenum, move = best_legal_move(y[i], boards[i])
+				movenum, move = boards[i].best_move(y[i])
 				games[i].append([x[i], movenum])
 				boards[i].play(*move)
 

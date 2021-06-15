@@ -150,6 +150,23 @@ class Board:
 				else: assert False
 		return ret
 
+	def best_move(self, y):
+		sign = -1
+		if(self.turn == 2): sign = 1
+
+		t = (self.turn-1)*(self.height*self.width+1)
+
+		movenum = self.height*self.width + t
+		move = (-1, -1) #pass
+		best = sign*y[self.height*self.width + t] #pass
+		for r in range(self.height):
+			for c in range(self.width):
+				if(sign*y[r*self.width+c + t] > best and self.is_legal(r, c)):
+					best = sign*y[r*self.width+c + t]
+					move = (r, c)
+					movenum = r*self.width+c + t
+		return movenum, move
+
 	def __str__(self):
 		L = []
 		for r in range(self.height):

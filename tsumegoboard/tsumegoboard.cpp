@@ -284,6 +284,34 @@ static PyObject* Board_features(BoardObject* self, PyObject* Py_UNUSED(ignored))
     return x;
 }
 
+static PyObject* Board_best_move(BoardObject* self, PyObject* args){
+    if(PyArray_API == NULL) import_array();
+
+    PyArrayObject* y;
+    if(!PyArg_ParseTuple(args, "O!", &PyArray_Type, &y));
+
+    int sign = -1;
+    if(self->turn == 2) sign = 1;
+
+    int t = (self->turn-1)*(self->height*self->width+1);
+
+    int movenum = self->height*self->width + t;
+    std::pair<int, int> move = {-1, -1};
+    float* item = (float*)PyArray_GETPTR1(y, self->height*self->width + t);
+    float best = sign*(*item);
+    for(int r = 0; r < self->height; r++){
+        for(int c = 0; c < self->width; c++){
+            item = (float*)PyArray_GETPTR1(y, r*self->width+c + t);
+            if(sign*(*item) > best and is_legal(self, r, c)){
+                best = sign*(*item);
+                move = {r, c};
+                movenum = r*self->width+c + t;
+            }
+        }
+    }
+    return Py_BuildValue("i(ii)", movenum, move.first, move.second);
+}
+
 static PyObject* Board_str(BoardObject* self){
     std::string s = "";
     for(int r = 0; r < self->height; r++){
@@ -323,6 +351,7 @@ static PyMethodDef Board_methods[] = {
     {"black_won", (PyCFunction)Board_black_won, METH_NOARGS, "Check if black won"},
     {"game_over", (PyCFunction)Board_game_over, METH_NOARGS, "Check if game is over (white won)"},
     {"features", (PyCFunction)Board_features, METH_NOARGS, "Features for neural net"},
+    {"best_move", (PyCFunction)Board_best_move, METH_VARARGS, "Best legal move from nn prediction"},
     {NULL}
 };
 
