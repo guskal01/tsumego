@@ -35,12 +35,27 @@ class Network(nn.Module):
 		x = self.fc(x)
 		return x
 
-def build_board(height, width):
+def random_tsumego(height, width):
 	b = Board(height, width)
-	b.set_stone(1, 1, 2)
-	b.set_stone(2, 2, 2)
-	b.set_stone(1, 3, 2)
+	white = random.randint(1, height*width//3) # how many times we will try to place a white stone
+	black = random.randint(0, white//2+1) # how many times we will try to place a black stone
+	tries = [black, white]
+	while(any(tries)):
+		color = random.randint(1,2)
+		if(tries[color-1] == 0): continue
+		r = random.randrange(height)
+		c = random.randrange(width)
+		if(b.turn != color):
+			b.switch_turn()
+		b.reset_superko()
+		if(b.is_legal(r, c)):
+			b.play(r, c)
+		tries[color-1] -= 1
+
+	if(random.randint(0,1)):
+		b.switch_turn()
 	b.reset_superko()
+	if(b.black_won()): return random_tsumego(height, width)
 	return b
 
 def train(height, width, gui=None):
@@ -48,12 +63,12 @@ def train(height, width, gui=None):
 	optimizer = torch.optim.Adam(net.parameters(), lr=1e-5)
 
 	experience = deque(maxlen=10000)
-	gamma = 1
+	eps = 1
 	rounds = 0
 	while(1):
 		boards = []
 		for i in range(SIMULS):
-			boards.append(build_board(height, width))
+			boards.append(random_tsumego(height, width))
 		games = [[] for _ in range(SIMULS)]
 		ended = 0
 		while(ended < SIMULS):
@@ -67,7 +82,7 @@ def train(height, width, gui=None):
 					continue
 				noise = np.random.normal(0, .1, y[i].shape)
 				y[i] += noise
-				if(random.random() < gamma): y[i] = noise
+				if(random.random() < eps): y[i] = noise
 				movenum, move = boards[i].best_move(y[i])
 				games[i].append([x[i], movenum])
 				boards[i].play(*move)
@@ -78,9 +93,7 @@ def train(height, width, gui=None):
 				if(winner != None):
 					for j in range(len(games[i])):
 						games[i][j].append(winner)
-					print("BW"[winner], end="", flush=True)
 					ended += 1
-		print()
 		train_data = []
 		for i in range(SIMULS):
 			train_data += games[i]
@@ -110,21 +123,19 @@ def train(height, width, gui=None):
 			optimizer.step()
 		if(rounds % 50 == 0 and rounds != 0):
 			#exit()
+			print("EPS:", eps)
 			test(height, width, net)
-			if(rounds%100 == 0): playgame(height, width, net, gui)
+			#if(rounds%100 == 0): playgame(height, width, net, gui)
 		rounds += 1
-		gamma *= 0.98
-		print("GAMMA:", gamma)
+		eps *= 0.98
 
 def test(height, width, net):
-	print("TESTING...")
 	gamecnt = 100
 	wins = 0
 	for game in range(gamecnt):
-		b = build_board(height, width)
-		moves = 0
+		b = random_tsumego(height, width)
 		while(1):
-			if(moves%2 == 0):
+			if(b.turn == 1):
 				move = b.get_legal_moves()
 				if(len(move) == 1): move = move[0]
 				else: move = random.sample(move[1:], 1)[0]
@@ -133,17 +144,18 @@ def test(height, width, net):
 				y = net(x.to(device)).detach().cpu().numpy()
 				movenum, move = b.best_move(y[0])
 			b.play(*move)
-			moves += 1
 			if(b.black_won()):
 				break
 			if(b.game_over()):
 				wins+=1
 				break
 	print("Wins:", wins)
-	time.sleep(3)
 
 def playgame(height, width, net, gui=None):
-	b = build_board(height, width)
+	b = random_tsumego(height, width)
+	if(gui): gui.update(b)
+	print(b)
+	time.sleep(1)
 	while(1):
 		x = torch.from_numpy(b.features()).unsqueeze(0)
 		y = net(x.to(device)).detach().cpu().numpy()
