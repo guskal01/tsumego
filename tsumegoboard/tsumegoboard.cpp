@@ -212,11 +212,15 @@ static PyObject* Board_is_legal(BoardObject* self, PyObject* args){
 
 static PyObject* Board_get_legal_moves(BoardObject* self, PyObject* Py_UNUSED(ignored)){
     PyObject* ret = PyList_New(0);
-    PyList_Append(ret, Py_BuildValue("ii", -1, -1));
+    PyObject* m = Py_BuildValue("ii", -1, -1);
+    PyList_Append(ret, m);
+    Py_DECREF(m);
     for(int r = 0; r < self->height; r++){
         for(int c = 0; c < self->width; c++){
             if(is_legal(self, r, c)){
-                PyList_Append(ret, Py_BuildValue("ii", r, c));
+                PyObject* m = Py_BuildValue("ii", r, c);
+                PyList_Append(ret, m);
+                Py_DECREF(m);
             }
         }
     }
