@@ -40,9 +40,9 @@ def main():
 if(use_gui):
 	from gui import TsumegoApp
 	gui = TsumegoApp(height, width)
+	t = threading.Thread(target=main)
+	t.start()
+	gui.run()
 else:
 	gui = None
-t = threading.Thread(target=main)
-t.start()
-if(gui): gui.run()
-
+	main()

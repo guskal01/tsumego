@@ -6,6 +6,7 @@ import random
 import time
 from tsumegoboard import Board
 from collections import deque
+import grapher
 
 SIMULS = 20 # number of games played at the same time, in one round
 BATCH_SIZE = 32
@@ -59,13 +60,28 @@ def random_tsumego(height, width):
 	return b
 
 def train(height, width, gui=None):
+	save_run = False
+	if(save_run): print("=== SAVING ===")
+	else: print("=== *NOT* SAVING ===")
+	run_id = ''.join([chr(random.randint(ord('A'), ord('Z'))) for _ in range(5)])
+	print("ID:", run_id)
+
 	net = Network(height, width, 6).to(device)
 	optimizer = torch.optim.Adam(net.parameters(), lr=1e-5)
 
 	experience = deque(maxlen=10000)
 	eps = 1
 	rounds = 0
+	start = time.time()
 	while(1):
+		if(rounds % 50 == 0):
+			#exit()
+			print("EPS:", eps)
+			wr = test(height, width, net)
+			grapher.x = 'time'
+			grapher.add_point(run_id, rounds*SIMULS, time.time()-start, wr, save_run)
+			#if(rounds%100 == 0): playgame(height, width, net, gui)
+
 		boards = []
 		for i in range(SIMULS):
 			boards.append(random_tsumego(height, width))
@@ -121,16 +137,11 @@ def train(height, width, gui=None):
 			optimizer.zero_grad()
 			loss.backward()
 			optimizer.step()
-		if(rounds % 50 == 0 and rounds != 0):
-			#exit()
-			print("EPS:", eps)
-			test(height, width, net)
-			#if(rounds%100 == 0): playgame(height, width, net, gui)
 		rounds += 1
 		eps *= 0.98
 
 def test(height, width, net):
-	gamecnt = 100
+	gamecnt = 200
 	wins = 0
 	for game in range(gamecnt):
 		b = random_tsumego(height, width)
@@ -150,6 +161,7 @@ def test(height, width, net):
 				wins+=1
 				break
 	print("Wins:", wins)
+	return wins/gamecnt
 
 def playgame(height, width, net, gui=None):
 	b = random_tsumego(height, width)
