@@ -24,8 +24,8 @@ def update():
 
 def add_point(id, _nof_games, _time, _winrate, save):
 	if(save):
-		os.makedirs('runs', exist_ok=True)
-		file = open(f'runs/{id}.txt', 'a+')
+		os.makedirs(f'runs/{id}', exist_ok=True)
+		file = open(f'runs/{id}/log.txt', 'a+')
 		file.write(f'{_nof_games},{_time},{_winrate}\n')
 		file.close()
 
@@ -35,7 +35,7 @@ def add_point(id, _nof_games, _time, _winrate, save):
 	update()
 
 def add_run(id):
-	file = open(f'runs/{id}.txt', 'r')
+	file = open(f'runs/{id}/log.txt', 'r')
 	s = file.read().strip().split('\n')
 	file.close()
 	other_runs.append(list(zip(*[map(float, x.split(',')) for x in s])))

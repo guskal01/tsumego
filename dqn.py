@@ -81,6 +81,8 @@ def train(height, width, gui=None):
 			grapher.x = 'time'
 			grapher.add_point(run_id, rounds*SIMULS, time.time()-start, wr, save_run)
 			#if(rounds%100 == 0): playgame(height, width, net, gui)
+			if(save_run and rounds%1000 == 0):
+				torch.save(net, f'runs/{run_id}/{rounds*SIMULS}')
 
 		boards = []
 		for i in range(SIMULS):
