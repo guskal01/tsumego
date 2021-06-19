@@ -84,6 +84,7 @@ def train(height, width, gui=None):
 			if(save_run and rounds%1000 == 0):
 				torch.save(net, f'runs/{run_id}/{rounds*SIMULS}')
 
+		net.train()
 		boards = []
 		for i in range(SIMULS):
 			boards.append(random_tsumego(height, width))
@@ -143,6 +144,7 @@ def train(height, width, gui=None):
 		eps *= 0.98
 
 def test(height, width, net):
+	net.eval()
 	gamecnt = 200
 	wins = 0
 	for game in range(gamecnt):
@@ -166,6 +168,7 @@ def test(height, width, net):
 	return wins/gamecnt
 
 def playgame(height, width, net, gui=None):
+	net.eval()
 	b = random_tsumego(height, width)
 	if(gui): gui.update(b)
 	print(b)
