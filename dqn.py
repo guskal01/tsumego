@@ -65,6 +65,7 @@ def train(height, width, gui=None):
 	else: print("=== *NOT* SAVING ===")
 	run_id = ''.join([chr(random.randint(ord('A'), ord('Z'))) for _ in range(5)])
 	print("ID:", run_id)
+	oppnet = torch.load('runs/A/1780000')
 
 	net = Network(height, width, 6).to(device)
 	optimizer = torch.optim.Adam(net.parameters(), lr=1e-5)
@@ -74,10 +75,10 @@ def train(height, width, gui=None):
 	rounds = 0
 	start = time.time()
 	while(1):
-		if(rounds % 50 == 0):
+		if(rounds % 100 == 0):
 			#exit()
 			print("EPS:", eps)
-			wr = test(height, width, net)
+			wr = test(height, width, net, oppnet)
 			grapher.x = 'time'
 			grapher.add_point(run_id, rounds*SIMULS, time.time()-start, wr, save_run)
 			#if(rounds%100 == 0): playgame(height, width, net, gui)
@@ -143,26 +144,33 @@ def train(height, width, gui=None):
 		rounds += 1
 		eps *= 0.98
 
-def test(height, width, net):
+def test(height, width, net, oppnet=None):
 	net.eval()
 	gamecnt = 200
 	wins = 0
 	for game in range(gamecnt):
 		b = random_tsumego(height, width)
+		player = 1 if game<gamecnt//2 else 2
 		while(1):
-			if(b.turn == 1):
-				move = b.get_legal_moves()
-				if(len(move) == 1): move = move[0]
-				else: move = random.sample(move[1:], 1)[0]
-			else:
+			if(b.turn == player):
 				x = torch.from_numpy(b.features()).unsqueeze(0)
 				y = net(x.to(device)).detach().cpu().numpy()
 				movenum, move = b.best_move(y[0])
+			else:
+				if(oppnet == None):
+					move = b.get_legal_moves()
+					if(len(move) == 1): move = move[0]
+					else: move = random.sample(move[1:], 1)[0]
+				else:
+					x = torch.from_numpy(b.features()).unsqueeze(0)
+					y = oppnet(x.to(device)).detach().cpu().numpy()
+					movenum, move = b.best_move(y[0])
 			b.play(*move)
 			if(b.black_won()):
+				if(player == 1): wins+=1
 				break
 			if(b.game_over()):
-				wins+=1
+				if(player == 2): wins+=1
 				break
 	print("Wins:", wins)
 	return wins/gamecnt
